@@ -81,10 +81,11 @@ SLS.prototype.log = function (level, msg, meta, callback) {
         time: Math.floor(new Date().getTime() / 1000),
         contents: output
       }],
-      topic: meta || meta.topic || '',
-      source: meta || meta.source || ''
+      topic: (meta && meta.topic) || '',
+      source: (meta && meta.source) || ''
     }
   }, function (err, data) {
+    console.info(err, data);
 
     if (err) {
       self.emit('error', err);
