@@ -1,5 +1,5 @@
 var winston = require('winston');
-var SLS = require('../winston-sls').SLS;
+var SLS = require('../winston-sls');
 
 // Copy the options.js.example file in this directory, name it options.js
 // and add in your AWS credentials.
@@ -10,7 +10,8 @@ winston.add(winston.transports.SLS, {
   apiVersion: '2015-06-01',
   projectName: '在SLS控制台创建',
   logStoreName: '在SLS控制台创建',
-  timeout: 2000 // 可选
+  timeout: 2000,    // 可选
+  handleExceptions: true
 });
 
 // do an info log

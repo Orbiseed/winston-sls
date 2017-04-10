@@ -2,7 +2,7 @@ var util = require('util');
 var aliyun = require('aliyun-sdk');
 var winston = require('winston');
 
-var SLS = exports.SLS = function (options) {
+var SLS = module.exports = function (options) {
   options = options || {};
 
   if (!options.accessKeyId) {
@@ -25,11 +25,12 @@ var SLS = exports.SLS = function (options) {
     throw new Error("Required: logStoreName");
   }
 
-  // Winston Options
-  this.name = 'sls';
+  this.name = options.name || 'sls';
   this.level = options.level || 'info';
   this.projectName =  options.projectName;
   this.logStoreName =  options.logStoreName;
+  this.handleExceptions =  options.handleExceptions || false;
+  this.exceptionsLevel =  options.exceptionsLevel || 'error';
 
   this.sls = new aliyun.SLS({
     accessKeyId: options.accessKeyId,
@@ -61,6 +62,12 @@ SLS.prototype.log = function (level, msg, meta, callback) {
   }
 
   var self = this;
+
+  // 在这种情况下，认为这不是 meta，而是 msg 的一部分
+  if (meta && !meta.topic && !meta.source) {
+    msg = stringify(msg) + ' ' + stringify(meta);
+  }
+
   var output = [
     {
       key: 'level',
@@ -68,7 +75,7 @@ SLS.prototype.log = function (level, msg, meta, callback) {
     },
     {
       key: 'message',
-      value: stringify(msg) || ''
+      value: msg
     }
   ];
 
@@ -85,8 +92,6 @@ SLS.prototype.log = function (level, msg, meta, callback) {
       source: (meta && meta.source) || ''
     }
   }, function (err, data) {
-    console.info(err, data);
-
     if (err) {
       self.emit('error', err);
       return;
