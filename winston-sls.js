@@ -1,8 +1,8 @@
-var util = require('util');
-var aliyun = require('aliyun-sdk');
-var winston = require('winston');
+let util = require('util');
+let aliyun = require('aliyun-sdk');
+let winston = require('winston');
 
-var SLS = module.exports = function (options) {
+let SLS = module.exports = function (options) {
   options = options || {};
 
   if (!options.accessKeyId) {
@@ -31,6 +31,7 @@ var SLS = module.exports = function (options) {
   this.logStoreName =  options.logStoreName;
   this.handleExceptions =  options.handleExceptions || false;
   this.exceptionsLevel =  options.exceptionsLevel || 'error';
+  this.logInterval = options.logInterval || 2000;
   this.buffer = [];
 
   this.sls = new aliyun.SLS({
@@ -62,57 +63,89 @@ SLS.prototype.log = function (level, msg, meta, callback) {
     return callback(null, true);
   }
 
-  var self = this;
+  let self = this;
 
-  msg = stringify(msg);
+  {
+    msg = stringify(msg);
 
-  // 在这种情况下，认为这不是 meta，而是 msg 的一部分
-  if (meta && !meta.topic && !meta.source) {
-    if (Object.keys(meta).length === 0 && meta.constructor === Object) {
-      // 如果 meta 是一个 {} 则什么都不做
+    // 在这种情况下，认为这不是 meta，而是 msg 的一部分
+    if (meta && !meta.topic && !meta.source) {
+      if (Object.keys(meta).length === 0 && meta.constructor === Object) {
+        // 如果 meta 是一个 {} 则什么都不做
+      }
+      else {
+        msg = msg + ' ' + stringify(meta);
+      }
     }
-    else {
-      msg = msg + ' ' + stringify(meta);
-    }
-  }
 
-  var output = [
-    {
-      key: 'level',
-      value: level
-    },
-    {
-      key: 'message',
-      value: msg
-    }
-  ];
-
-  this.sls.putLogs({
-    //必选字段
-    projectName: this.projectName,
-    logStoreName: this.logStoreName,
-    logGroup: {
+    let logGroup = {
       logs: [{
         time: Math.floor(new Date().getTime() / 1000),
-        contents: output
+        contents: [
+          {
+            key: 'level',
+            value: level
+          },
+          {
+            key: 'message',
+            value: msg
+          }
+        ]
       }],
       topic: (meta && meta.topic) || '',
       source: (meta && meta.source) || ''
-    }
-  }, function (err, data) {
-    if (err) {
-      self.emit('error', err);
-      return;
-    }
+    };
 
-    self.emit('logged');
-  });
+    let i;
+    for (i = 0; i < this.buffer.length; i++) {
+      let item = this.buffer[i];
+      // 有匹配的
+      if (item.topic === logGroup.topic && item.source === logGroup.source) {
+        item.logs = item.logs.concat(logGroup.logs);
+        break;
+      }
+    }
+    // 没有匹配的
+    if (i >= this.buffer.length) {
+      this.buffer.push(logGroup);
+    }
+  }
+
+  let putLogs = function () {
+    if (self.timeoutId) return;
+
+    if (!self.buffer.length) return;
+
+    self.timeoutId = setTimeout(function () {
+      while (self.buffer.length) {
+        let logGroup = self.buffer.pop();
+        self.sls.putLogs({
+          //必选字段
+          projectName: self.projectName,
+          logStoreName: self.logStoreName,
+          logGroup: logGroup
+        }, function (err, data) {
+          // console.log(err, data);
+          self.timeoutId = null;
+
+          if (err) {
+            self.emit('error', err);
+            return;
+          }
+
+          self.emit('logged');
+        });
+      }
+    }, this.logInterval);
+  };
+
+  putLogs();
 
   // intially, tell the caller that everything was fine
   callback(null, true);
 };
 
-var stringify = function (s) {
+const stringify = function (s) {
   return JSON.stringify(s, function (key, value) {
     if (value instanceof Buffer) {
       return value.toString('base64');
