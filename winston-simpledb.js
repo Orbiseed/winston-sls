@@ -1,62 +1,43 @@
 var util = require('util');
 var aliyun = require('aliyun-sdk');
-var simpledb = require('awssum/lib/aliyun/simpledb');
 var winston = require('winston');
-var UUID = require('uuid-js');
-var common = require();
 
-// --------------------------------------------------------------------------------------------------------------------
-
-//
-// ### function SimpleDB (options)
-// Constructor for the SimpleDB transport object.
-//
-var SimpleDB = exports.SimpleDB = function (options) {
+var SLS = exports.SLS = function (options) {
   options = options || {};
 
-  // need the accessKeyId
   if (!options.accessKeyId) {
-    throw new Error("Required: accessKeyId for the aliyun account to log for.");
+    throw new Error("Required: accessKeyId");
   }
 
-  // need the secretAccessKey
   if (!options.secretAccessKey) {
-    throw new Error("Required: secretAccessKey for the aliyun account being used.");
+    throw new Error("Required: secretAccessKey");
   }
 
-  // need the projectName
-  if (!options.projectName) {
-    throw new Error("Required: projectName (or projectName generator) to log to.");
-  }
-
-  // need the endpoint
   if (!options.endpoint) {
-    throw new Error("Required: endpoint the domain is in.");
+    throw new Error("Required: endpoint");
+  }
+
+  if (!options.projectName) {
+    throw new Error("Required: projectName");
+  }
+
+  if (!options.logStoreName) {
+    throw new Error("Required: logStoreName");
   }
 
   // Winston Options
   this.name = 'sls';
   this.level = options.level || 'info';
+  this.projectName =  options.projectName;
+  this.logStoreName =  options.logStoreName;
 
-  // SimpleDB Options
-  if (options.projectName) {
-    this.projectName = options.projectName;
-  }
-  this.itemName = this.itemName || 'timestamp';
-  if (options.itemName) {
-    this.itemName = options.itemName;
-  }
-
-  // create the SimpleDB instance
-  this.sdb = new aliyun.SLS({
+  this.sls = new aliyun.SLS({
     accessKeyId: options.accessKeyId,
     secretAccessKey: options.secretAccessKey,
     endpoint: options.endpoint,
-    apiVersion: '2015-06-01'
-
-    //以下是可选配置
+    apiVersion: options.apiVersion || '2015-06-01'
     , httpOptions: {
-      timeout: 2000
+      timeout: options.timeout || 2000
     }
   });
 };
@@ -64,7 +45,7 @@ var SimpleDB = exports.SimpleDB = function (options) {
 //
 // Inherit from `winston.Transport` to take advantage of base functionality.
 //
-util.inherits(SimpleDB, winston.Transport);
+util.inherits(SLS, winston.Transport);
 
 //
 // ### function log (level, msg, [meta], callback)
@@ -74,7 +55,7 @@ util.inherits(SimpleDB, winston.Transport);
 // #### @callback {function} Continuation to respond to when complete.
 // Core logging method exposed to Winston. Metadata is optional.
 //
-SimpleDB.prototype.log = function (level, msg, meta, callback) {
+SLS.prototype.log = function (level, msg, meta, callback) {
   if (this.silent) {
     return callback(null, true);
   }
@@ -91,7 +72,7 @@ SimpleDB.prototype.log = function (level, msg, meta, callback) {
     }
   ];
 
-  sls.putLogs({
+  this.sls.putLogs({
     //必选字段
     projectName: this.projectName,
     logStoreName: this.logStoreName,
@@ -132,6 +113,6 @@ const stringify = function (s) {
 };
 
 //
-// Add SimpleDB to the transports defined by winston.
+// Add SLS to the transports defined by winston.
 //
-winston.transports.SimpleDB = SimpleDB;
+winston.transports.SLS = SLS;
