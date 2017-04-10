@@ -31,6 +31,7 @@ var SLS = module.exports = function (options) {
   this.logStoreName =  options.logStoreName;
   this.handleExceptions =  options.handleExceptions || false;
   this.exceptionsLevel =  options.exceptionsLevel || 'error';
+  this.buffer = [];
 
   this.sls = new aliyun.SLS({
     accessKeyId: options.accessKeyId,
@@ -63,9 +64,16 @@ SLS.prototype.log = function (level, msg, meta, callback) {
 
   var self = this;
 
+  msg = stringify(msg);
+
   // 在这种情况下，认为这不是 meta，而是 msg 的一部分
   if (meta && !meta.topic && !meta.source) {
-    msg = stringify(msg) + ' ' + stringify(meta);
+    if (Object.keys(meta).length === 0 && meta.constructor === Object) {
+      // 如果 meta 是一个 {} 则什么都不做
+    }
+    else {
+      msg = msg + ' ' + stringify(meta);
+    }
   }
 
   var output = [
@@ -104,7 +112,7 @@ SLS.prototype.log = function (level, msg, meta, callback) {
   callback(null, true);
 };
 
-const stringify = function (s) {
+var stringify = function (s) {
   return JSON.stringify(s, function (key, value) {
     if (value instanceof Buffer) {
       return value.toString('base64');
