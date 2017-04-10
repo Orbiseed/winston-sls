@@ -136,7 +136,7 @@ SLS.prototype.log = function (level, msg, meta, callback) {
           self.emit('logged');
         });
       }
-    }, this.logInterval);
+    }, self.logInterval);
   };
 
   putLogs();
