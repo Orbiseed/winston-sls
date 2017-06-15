@@ -101,8 +101,12 @@ SLS.prototype.log = function (level, msg, meta, callback) {
       let item = this.buffer[i];
       // 有匹配的
       if (item.topic === logGroup.topic && item.source === logGroup.source) {
-        item.logs = item.logs.concat(logGroup.logs);
-        break;
+        // 注意，前提是一次 log 调用只进来一个 log
+        // 超过 4096 就要新建一个 logGroup
+        if (item.logs < 4096) {
+          item.logs = item.logs.concat(logGroup.logs);
+          break;
+        }
       }
     }
     // 没有匹配的
