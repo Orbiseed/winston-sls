@@ -138,6 +138,7 @@ SLS.prototype.log = function (level, msg, meta, callback) {
           logGroup: logGroup
         }, function (err, data) {
           // console.log(err, data);
+          // fixme: 应该等待所有请求完成后才执行这一句
           self.timeoutId = null;
 
           if (err) {
