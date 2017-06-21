@@ -27,11 +27,12 @@ let SLS = module.exports = function (options) {
 
   this.name = options.name || 'sls';
   this.level = options.level || 'info';
-  this.projectName =  options.projectName;
-  this.logStoreName =  options.logStoreName;
-  this.handleExceptions =  options.handleExceptions || false;
-  this.exceptionsLevel =  options.exceptionsLevel || 'error';
+  this.projectName = options.projectName;
+  this.logStoreName = options.logStoreName;
+  this.handleExceptions = options.handleExceptions || false;
+  this.exceptionsLevel = options.exceptionsLevel || 'error';
   this.logInterval = options.logInterval || 2000;
+  this.bufferMax = options.bufferMax || 20;
   this.buffer = [];
 
   this.sls = new aliyun.SLS({
@@ -60,6 +61,11 @@ util.inherits(SLS, winston.Transport);
 //
 SLS.prototype.log = function (level, msg, meta, callback) {
   if (this.silent) {
+    return callback(null, true);
+  }
+
+  if (this.buffer.length > this.bufferMax) {
+    console.log('winston sls buffer exceed max', this.bufferMax, 'cancel');
     return callback(null, true);
   }
 
@@ -97,21 +103,22 @@ SLS.prototype.log = function (level, msg, meta, callback) {
     };
 
     let i;
-    for (i = 0; i < this.buffer.length; i++) {
-      let item = this.buffer[i];
+    for (i = 0; i < self.buffer.length; i++) {
+      let item = self.buffer[i];
       // 有匹配的
       if (item.topic === logGroup.topic && item.source === logGroup.source) {
         // 注意，前提是一次 log 调用只进来一个 log
         // 超过 4096 就要新建一个 logGroup
-        if (item.logs < 4096) {
+        // console.log(item.logs.length);
+        if (item.logs.length < 4096) {
           item.logs = item.logs.concat(logGroup.logs);
           break;
         }
       }
     }
     // 没有匹配的
-    if (i >= this.buffer.length) {
-      this.buffer.push(logGroup);
+    if (i >= self.buffer.length) {
+      self.buffer.push(logGroup);
     }
   }
 
@@ -121,8 +128,9 @@ SLS.prototype.log = function (level, msg, meta, callback) {
     if (!self.buffer.length) return;
 
     self.timeoutId = setTimeout(function () {
-      while (self.buffer.length) {
-        let logGroup = self.buffer.pop();
+      console.log('start put logs to sls, buffer length', self.buffer.length);
+      while (self.buffer.length > 0) {
+        let logGroup = self.buffer.shift();
         self.sls.putLogs({
           //必选字段
           projectName: self.projectName,
