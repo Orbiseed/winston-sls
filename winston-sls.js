@@ -142,8 +142,14 @@ SLS.prototype.log = function (level, msg, meta, callback) {
           self.timeoutId = null;
 
           if (err) {
-            console.log('winston sls error', err, self.projectName, self.logStoreName, logGroup);
-            self.emit('error', err);
+            // console.log('winston sls error', err, self.projectName, self.logStoreName, logGroup);
+            self.emit('error', err, self.projectName, self.logStoreName, logGroup);
+            self.emit('error', {
+              err: err,
+              projectName: self.projectName,
+              logStoreName: self.logStoreName,
+              logGroup: logGroup
+            });
             return;
           }
 
