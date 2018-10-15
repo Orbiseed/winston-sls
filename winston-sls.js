@@ -98,7 +98,7 @@ SLS.prototype.log = function (level, msg, meta, callback) {
           }
         ]
       }],
-      topic: (meta && meta.topic) || '',
+      topic: (meta && (meta.topic !== undefined) && (meta.topic + '')) || '',
       source: (meta && meta.source) || ''
     };
 
@@ -143,7 +143,7 @@ SLS.prototype.log = function (level, msg, meta, callback) {
 
           if (err) {
             console.log('winston sls error', err, self.projectName, self.logStoreName, logGroup);
-            self.emit('error', err);
+            // self.emit('error', err);
             return;
           }
 
