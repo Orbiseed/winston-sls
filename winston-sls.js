@@ -127,6 +127,9 @@ SLS.prototype.log = function (level, msg, meta, callback) {
 
     if (!self.buffer.length) return;
 
+    // 超过 100k 不上传
+    if (self.buffer.length > 1024 * 100) return;
+
     self.timeoutId = setTimeout(function () {
       console.log('start put logs to sls, buffer length', self.buffer.length);
       while (self.buffer.length > 0) {
@@ -142,7 +145,7 @@ SLS.prototype.log = function (level, msg, meta, callback) {
           self.timeoutId = null;
 
           if (err) {
-            console.log('winston sls error', err, self.projectName, self.logStoreName, logGroup);
+            console.log('winston sls error', err, self.projectName, self.logStoreName);
             // self.emit('error', err);
             return;
           }
