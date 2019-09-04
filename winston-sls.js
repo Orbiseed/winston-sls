@@ -1,5 +1,5 @@
 let util = require('util');
-let aliyun = require('aliyun-sdk');
+let aliyun = require('aliyun-sdk2');
 let winston = require('winston');
 
 let SLS = module.exports = function (options) {
