@@ -1,7 +1,7 @@
 {
   "name": "winston-sls",
   "description": "A Winston transport for Aliyun SLS",
-  "version": "0.9.5",
+  "version": "0.9.6",
   "author": {
     "name": "chylvina",
     "email": "chylvina@qq.com"
@@ -21,7 +21,7 @@
     "sls"
   ],
   "dependencies": {
-    "aliyun-sdk2": "^1.0.2"
+    "aliyun-sdk2": "^1.0.3"
   },
   "devDependencies": {
     "winston": ">= 0.5.6"
