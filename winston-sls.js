@@ -108,7 +108,6 @@ SLS.prototype.log = function(level, msg, meta, callback) {
       if (item.topic === logGroup.topic && item.source === logGroup.source) {
         // 注意，前提是一次 log 调用只进来一个 log
         // 超过 4096 就要新建一个 logGroup
-        // console.log(item.logs.length);
         if (item.logs.length < 4096) {
           item.logs = item.logs.concat(logGroup.logs);
           break;
