@@ -1,55 +1,53 @@
-let util = require('util');
-let aliyun = require('aliyun-sdk2');
-let winston = require('winston');
+let util = require("util");
+let aliyun = require("aliyun-sdk2");
+let winston = require("winston");
 
-let SLS = module.exports = function (options) {
-  options = options || {};
+class SLS extends winston.Transport {
+  constructor(options) {
+    super();
+    options = options || {};
 
-  if (!options.accessKeyId) {
-    throw new Error("Required: accessKeyId");
-  }
-
-  if (!options.secretAccessKey) {
-    throw new Error("Required: secretAccessKey");
-  }
-
-  if (!options.endpoint) {
-    throw new Error("Required: endpoint");
-  }
-
-  if (!options.projectName) {
-    throw new Error("Required: projectName");
-  }
-
-  if (!options.logStoreName) {
-    throw new Error("Required: logStoreName");
-  }
-
-  this.name = options.name || 'sls';
-  this.level = options.level || 'info';
-  this.projectName = options.projectName;
-  this.logStoreName = options.logStoreName;
-  this.handleExceptions = options.handleExceptions || false;
-  this.exceptionsLevel = options.exceptionsLevel || 'error';
-  this.logInterval = options.logInterval || 2000;
-  this.bufferMax = options.bufferMax || 20;
-  this.buffer = [];
-
-  this.sls = new aliyun.SLS({
-    accessKeyId: options.accessKeyId,
-    secretAccessKey: options.secretAccessKey,
-    endpoint: options.endpoint,
-    apiVersion: options.apiVersion || '2015-06-01'
-    , httpOptions: {
-      timeout: options.timeout || 2000
+    if (!options.accessKeyId) {
+      throw new Error("Required: accessKeyId");
     }
-  });
-};
 
-//
-// Inherit from `winston.Transport` to take advantage of base functionality.
-//
-util.inherits(SLS, winston.Transport);
+    if (!options.secretAccessKey) {
+      throw new Error("Required: secretAccessKey");
+    }
+
+    if (!options.endpoint) {
+      throw new Error("Required: endpoint");
+    }
+
+    if (!options.projectName) {
+      throw new Error("Required: projectName");
+    }
+
+    if (!options.logStoreName) {
+      throw new Error("Required: logStoreName");
+    }
+
+    this.name = options.name || "sls";
+    this.level = options.level || "info";
+    this.projectName = options.projectName;
+    this.logStoreName = options.logStoreName;
+    this.handleExceptions = options.handleExceptions || false;
+    this.exceptionsLevel = options.exceptionsLevel || "error";
+    this.logInterval = options.logInterval || 2000;
+    this.bufferMax = options.bufferMax || 20;
+    this.buffer = [];
+
+    this.sls = new aliyun.SLS({
+      accessKeyId: options.accessKeyId,
+      secretAccessKey: options.secretAccessKey,
+      endpoint: options.endpoint,
+      apiVersion: options.apiVersion || "2015-06-01",
+      httpOptions: {
+        timeout: options.timeout || 2000
+      }
+    });
+  }
+}
 
 //
 // ### function log (level, msg, [meta], callback)
@@ -59,13 +57,13 @@ util.inherits(SLS, winston.Transport);
 // #### @callback {function} Continuation to respond to when complete.
 // Core logging method exposed to Winston. Metadata is optional.
 //
-SLS.prototype.log = function (level, msg, meta, callback) {
+SLS.prototype.log = function(level, msg, meta, callback) {
   if (this.silent) {
     return callback(null, true);
   }
 
   if (this.buffer.length > this.bufferMax) {
-    console.log('winston sls buffer exceed max', this.bufferMax, 'cancel');
+    console.log("winston sls buffer exceed max", this.bufferMax, "cancel");
     return callback(null, true);
   }
 
@@ -78,28 +76,29 @@ SLS.prototype.log = function (level, msg, meta, callback) {
     if (meta && !meta.topic && !meta.source) {
       if (Object.keys(meta).length === 0 && meta.constructor === Object) {
         // 如果 meta 是一个 {} 则什么都不做
-      }
-      else {
-        msg = msg + ' ' + stringify(meta);
+      } else {
+        msg = msg + " " + stringify(meta);
       }
     }
 
     let logGroup = {
-      logs: [{
-        time: Math.floor(new Date().getTime() / 1000),
-        contents: [
-          {
-            key: 'level',
-            value: level
-          },
-          {
-            key: 'message',
-            value: msg
-          }
-        ]
-      }],
-      topic: (meta && (meta.topic !== undefined) && (meta.topic + '')) || '',
-      source: (meta && meta.source) || ''
+      logs: [
+        {
+          time: Math.floor(new Date().getTime() / 1000),
+          contents: [
+            {
+              key: "level",
+              value: level
+            },
+            {
+              key: "message",
+              value: msg
+            }
+          ]
+        }
+      ],
+      topic: (meta && meta.topic !== undefined && meta.topic + "") || "",
+      source: (meta && meta.source) || ""
     };
 
     let i;
@@ -122,7 +121,7 @@ SLS.prototype.log = function (level, msg, meta, callback) {
     }
   }
 
-  let putLogs = function () {
+  let putLogs = function() {
     if (self.timeoutId) return;
 
     if (!self.buffer.length) return;
@@ -130,28 +129,36 @@ SLS.prototype.log = function (level, msg, meta, callback) {
     // 超过 100k 不上传
     if (self.buffer.length > 1024 * 100) return;
 
-    self.timeoutId = setTimeout(function () {
-      console.log('start put logs to sls, buffer length', self.buffer.length);
+    self.timeoutId = setTimeout(function() {
+      //console.log('start put logs to sls, buffer length', self.buffer.length);
       while (self.buffer.length > 0) {
         let logGroup = self.buffer.shift();
-        self.sls.putLogs({
-          //必选字段
-          projectName: self.projectName,
-          logStoreName: self.logStoreName,
-          logGroup: logGroup
-        }, function (err, data) {
-          // console.log(err, data);
-          // fixme: 应该等待所有请求完成后才执行这一句
-          self.timeoutId = null;
+        self.sls.putLogs(
+          {
+            //必选字段
+            projectName: self.projectName,
+            logStoreName: self.logStoreName,
+            logGroup: logGroup
+          },
+          function(err, data) {
+            // console.log(err, data);
+            // fixme: 应该等待所有请求完成后才执行这一句
+            self.timeoutId = null;
 
-          if (err) {
-            console.log('winston sls error', err, self.projectName, self.logStoreName);
-            // self.emit('error', err);
-            return;
+            if (err) {
+              console.log(
+                "winston sls error",
+                err,
+                self.projectName,
+                self.logStoreName
+              );
+              // self.emit('error', err);
+              return;
+            }
+
+            self.emit("logged");
           }
-
-          self.emit('logged');
-        });
+        );
       }
     }, self.logInterval);
   };
@@ -162,10 +169,10 @@ SLS.prototype.log = function (level, msg, meta, callback) {
   callback(null, true);
 };
 
-const stringify = function (s) {
-  return JSON.stringify(s, function (key, value) {
+const stringify = function(s) {
+  return JSON.stringify(s, function(key, value) {
     if (value instanceof Buffer) {
-      return value.toString('base64');
+      return value.toString("base64");
     }
 
     if (value instanceof Error) {
@@ -173,7 +180,7 @@ const stringify = function (s) {
     }
 
     return value;
-  })
+  });
 };
 
 //
